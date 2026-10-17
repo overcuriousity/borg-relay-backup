@@ -1,0 +1,10 @@
+#!/bin/bash
+# Test stand-in for curl: appends args, -K config contents and stdin to $CURL_LOG.
+prev=
+for a in "$@"; do
+    [[ $prev == -K ]] && cat "$a" >>"$CURL_LOG"
+    printf 'ARG %s\n' "$a" >>"$CURL_LOG"
+    prev=$a
+done
+if [[ " $* " == *" @- "* ]]; then cat >>"$CURL_LOG"; printf '\n' >>"$CURL_LOG"; fi
+exit "${CURL_RC:-0}"

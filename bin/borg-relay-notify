@@ -1,0 +1,20 @@
+#!/bin/bash
+# OnFailure= handler: push the failed unit's journal of its last run.
+# Usage: borg-relay-notify UNIT   (from borg-relay-notify@%n.service)
+set -uo pipefail
+export LC_ALL=C
+here=$(dirname "$(readlink -f "$0")")
+# shellcheck source=../lib/common.sh
+source "$here/../lib/common.sh"
+# shellcheck source=../lib/notify.sh
+source "$here/../lib/notify.sh"
+
+unit=${1:?usage: borg-relay-notify UNIT}
+notify_load
+inv=$(systemctl show -p InvocationID --value "$unit" 2>/dev/null)
+if [[ -n $inv ]]; then
+    body=$(journalctl --no-pager -o cat _SYSTEMD_INVOCATION_ID="$inv" | tail -n 200)
+else
+    body=$(journalctl --no-pager -o cat -u "$unit" -n 200)
+fi
+notify_send failure "[FAILED] $(hostname -s): $unit" "$body"
