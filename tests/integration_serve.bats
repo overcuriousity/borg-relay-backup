@@ -49,3 +49,18 @@ teardown() { rm -rf "$TMP"; }
     [ "$status" -eq 1 ]
     [[ $output == *"invalid client name"* ]]
 }
+
+@test "a wrong passphrase on an existing repo is classified as 'exists'" {
+    source "$REPO_ROOT/lib/common.sh"; source "$REPO_ROOT/lib/ui.sh"
+    borg init -e repokey-blake2 "$REPO"
+    out=$(BORG_PASSPHRASE=wrong borg info "$REPO" 2>&1) || true
+    [ "$(classify_borg_error "$out")" = exists ]
+}
+
+@test "the not-mounted message reliably reaches the client" {
+    sed -i 's/MOUNT_REQUIRE_MOUNTPOINT=no/MOUNT_REQUIRE_MOUNTPOINT=yes/' "$BR_ETC/relay.conf"
+    for _ in 1 2 3 4 5 6; do
+        run borg info "$REPO"
+        [[ $output == *"not mounted"* ]]
+    done
+}

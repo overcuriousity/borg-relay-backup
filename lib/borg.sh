@@ -2,7 +2,8 @@
 # Every borg invocation of borg-relay lives here (one place to touch for a Borg 2 move).
 BORG_BIN="${BORG_BIN:-borg}"
 
-_lockwait() { printf -- '--lock-wait=%s' "${BORG_LOCK_WAIT:-600}"; }
+# Backups and relay maintenance take the same repository lock: wait long for each other.
+_lockwait() { printf -- '--lock-wait=%s' "${BORG_LOCK_WAIT:-21600}"; }
 
 borg_info()       { "$BORG_BIN" info "$(_lockwait)" "$1"; }
 borg_init()       { "$BORG_BIN" init --encryption=repokey-blake2 "$1"; }
@@ -14,10 +15,12 @@ _borg_create_args() {
     for p in "${EXCLUDES[@]+"${EXCLUDES[@]}"}"; do BORG_CREATE_ARGS+=(--exclude "$p"); done
 }
 
-# borg_create REPO ARCHIVE - paths from BACKUP_PATHS, excludes from EXCLUDES
-borg_create() {
+# borg_create_bg REPO ARCHIVE - start borg create in the background, its pid in BORG_PID
+# (borg itself, not a subshell, so it can be stopped). Paths from BACKUP_PATHS, excludes from EXCLUDES.
+borg_create_bg() {
     _borg_create_args
-    "$BORG_BIN" create "$(_lockwait)" --stats "${BORG_CREATE_ARGS[@]}" "$1::$2" "${BACKUP_PATHS[@]}"
+    "$BORG_BIN" create "$(_lockwait)" --stats "${BORG_CREATE_ARGS[@]}" "$1::$2" "${BACKUP_PATHS[@]}" &
+    BORG_PID=$!
 }
 
 borg_dry_run() {
@@ -26,6 +29,8 @@ borg_dry_run() {
 }
 
 borg_archive_names()      { "$BORG_BIN" list "$(_lockwait)" --short "$1"; }
+# borg_archive_index REPO - "<id> <epoch> <name>" per archive (tamper check)
+borg_archive_index()      { "$BORG_BIN" list "$(_lockwait)" --format '{id} {time:%s} {archive}{NL}' "$1"; }
 borg_last_archive_epoch() { "$BORG_BIN" list "$(_lockwait)" --last 1 --format '{time:%s}{NL}' "$1"; }
 
 borg_prune()      { local repo=$1; shift; "$BORG_BIN" prune "$(_lockwait)" --list --stats "$@" "$repo"; }

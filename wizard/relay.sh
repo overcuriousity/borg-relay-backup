@@ -12,7 +12,13 @@ _relay_deps() {
 }
 
 _relay_user() {
-    id "$RUSER" >/dev/null 2>&1 || useradd --system --home-dir "$RHOME" --create-home --shell /usr/sbin/nologin "$RUSER"
+    # a real shell is required: sshd runs the forced command via the user's shell;
+    # `restrict` in authorized_keys and the sshd drop-in keep clients from using it
+    if id "$RUSER" >/dev/null 2>&1; then
+        usermod -s /bin/sh "$RUSER" || return 1
+    else
+        useradd --system --home-dir "$RHOME" --create-home --shell /bin/sh "$RUSER" || return 1
+    fi
     install -d -m 750 -o "$RUSER" -g "$RUSER" "$RHOME" "$RHOME/state"
     install -d -m 700 -o "$RUSER" -g "$RUSER" "$RHOME/.ssh"
     install -d -m 750 -o root -g "$RUSER" "$BR_ETC"

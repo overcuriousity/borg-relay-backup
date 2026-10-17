@@ -66,6 +66,10 @@ cmd_add_client() {
     read_input "Public key of client '$name': " 0
     line=$(relay_authorized_line "$name" "$REPLY") || exit 1
     install -d -m 700 -o "$RUSER" -g "$RUSER" "$BR_STATE/.ssh"
+    local blob owner
+    read -r _ blob _ <<<"$REPLY"
+    owner=$(grep -F " $blob borg-relay:" "$AUTH_KEYS" 2>/dev/null | sed 's/.* borg-relay://' | head -n1)
+    [[ -z $owner || $owner == "$name" ]] || die "this key is already authorized for '$owner' - every client needs its own key"
     tmp=$(mktemp)
     [[ -f $AUTH_KEYS ]] && grep -v " borg-relay:${name}\$" "$AUTH_KEYS" >"$tmp"
     printf '%s\n' "$line" >>"$tmp"
@@ -96,6 +100,20 @@ cmd_set_passphrase() {
     else
         die "verification failed - wrong passphrase or repo not initialized yet"
     fi
+    as_relay_user "$self" _baseline "$name" || die "could not record the tamper-check baseline"
+}
+
+# _baseline NAME - first tamper-check baseline, so even existing archives are protected
+cmd_baseline() {
+    need_name "${1-}"
+    relay_conf
+    (
+        repo_env "$1"
+        state=$BR_STATE/state/$1.archives
+        [[ -f $state ]] && exit 0
+        install -d -m 700 "$BR_STATE/state"
+        borg_archive_index "$REPO" >"$state.new" && mv "$state.new" "$state"
+    )
 }
 
 cmd_verify() { need_name "${1-}"; relay_conf; ( repo_env "$1"; borg_info "$REPO" >/dev/null ); }
@@ -120,21 +138,26 @@ maint_one() (
     state=$BR_STATE/state/$name.archives
     cur=$(mktemp)
     trap 'rm -f "$cur"' EXIT
-    borg_archive_names "$REPO" >"$cur" || { error "$name: cannot list archives"; exit 1; }
+    borg_archive_index "$REPO" >"$cur" || { error "$name: cannot list archives"; exit 1; }
     if [[ -f $state ]]; then
-        missing=$(tamper_missing "$state" "$cur")
-        if [[ -n $missing ]]; then
-            error "$name: archives deleted outside maintenance (possible tampering): $(tr '\n' ' ' <<<"$missing")"
+        # archives started up to 12 h before the last run may legitimately appear later
+        since=$(( $(stat -c %Y "$state") - 43200 ))
+        problems=$(tamper_report "$state" "$cur" "$since")
+        if [[ -n $problems ]]; then
+            error "$name: possible tampering - $(tr '\n' ';' <<<"$problems")"
             error "$name: prune/compact skipped - see RESTORE.md, 'Rolling back an append-only repository'"
             exit 1
         fi
     fi
     read -ra keep <<<"${KEEP:-$DEFAULT_KEEP}"
     borg_prune "$REPO" "${keep[@]}" || { error "$name: prune failed"; exit 1; }
-    borg_compact "$REPO"           || { error "$name: compact failed"; exit 1; }
-    borg_check_repo "$REPO"        || { error "$name: repository check failed"; exit 1; }
+    # record right after our own prune, so a later failure cannot look like tampering
     install -d -m 700 "$BR_STATE/state"
-    borg_archive_names "$REPO" >"$state.new" && mv "$state.new" "$state"
+    if ! borg_archive_index "$REPO" >"$state.new" || ! mv "$state.new" "$state"; then
+        error "$name: cannot record archive list"; exit 1
+    fi
+    borg_compact "$REPO"    || { error "$name: compact failed"; exit 1; }
+    borg_check_repo "$REPO" || { error "$name: repository check failed"; exit 1; }
     log "$name: maintenance ok ($(wc -l <"$state") archives)"
 )
 
@@ -167,6 +190,12 @@ cmd_watch() {
     (( problems == 0 )) || die "backups missing or stale"
 }
 
+# borg work always runs as the relay user (its known_hosts, cache and target access)
+case ${1-} in
+    list|maint|watch)
+        [[ $(id -un) == "$RUSER" ]] || exec runuser -u "$RUSER" -- "$self" "$1" ;;
+esac
+
 case ${1-} in
     add-client)     shift; cmd_add_client "$@" ;;
     set-passphrase) shift; cmd_set_passphrase "$@" ;;
@@ -174,5 +203,6 @@ case ${1-} in
     maint)          cmd_maint ;;
     watch)          cmd_watch ;;
     _verify)        shift; cmd_verify "$@" ;;
+    _baseline)      shift; cmd_baseline "$@" ;;
     *)              usage ;;
 esac

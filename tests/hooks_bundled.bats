@@ -70,3 +70,12 @@ conf() { printf '%s\n' "$@" >"$BR_ETC/client.conf"; chmod 600 "$BR_ETC/client.co
     [ "$status" -eq 0 ]
     grep -q '^docker compose --project-directory /opt/paperless exec -T webserver document_exporter /usr/src/paperless/export --delete' "$CALLS"
 }
+
+@test "pgpass and my.cnf escape special characters in passwords" {
+    source "$REPO_ROOT/lib/common.sh"; source "$REPO_ROOT/lib/dbdump.sh"
+    [ "$(pgpass_line h db u 'a:b\c')" = 'h:*:db:u:a\:b\\c' ]
+    [ "$(mycnf_content u 'p"w\x')" = $'[client]\nuser="u"\npassword=\'p"w\\\\x\'' ]
+    [ "$(mycnf_content u "plain")" = $'[client]\nuser="u"\npassword="plain"' ]
+    run mycnf_content u "a'b\"c"
+    [ "$status" -ne 0 ]
+}

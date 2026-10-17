@@ -60,5 +60,16 @@ relay_borg_env() {
     fi
 }
 
-tamper_missing()    { comm -23 <(sort -u "$1") <(sort -u "$2"); }
+# tamper_report PREV CUR SINCE - compare archive indexes ("<id> <epoch> <name>").
+# Prints "missing: NAME" for archives gone since PREV (identity = id, so a replaced
+# archive with the same name counts as missing) and "backdated: NAME" for new
+# archives whose time is before SINCE (they could push real ones out of retention).
+tamper_report() {
+    awk -v since="$3" '
+        { name = $0; sub(/^[^ ]+ [^ ]+ /, "", name) }
+        FILENAME == ARGV[1] { prev[$1] = name; next }   # (FNR==NR breaks on an empty PREV)
+        { cur[$1] = 1; if (!($1 in prev) && $2 + 0 < since + 0) print "backdated: " name }
+        END { for (id in prev) if (!(id in cur)) print "missing: " prev[id] }
+    ' "$1" "$2"
+}
 archive_age_hours() { echo $(( ($1 - $2) / 3600 )); }

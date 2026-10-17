@@ -29,4 +29,22 @@ dbdump_run() {
     log "dumped database $DB_NAME ($(du -h "$out" | cut -f1))"
 }
 
+# pgpass_line HOST DB USER PASSWORD - ':' and '\\' escaped as libpq requires
+pgpass_line() {
+    local esc=() f
+    for f in "$@"; do f=${f//\\/\\\\}; esc+=("${f//:/\\:}"); done
+    printf '%s:*:%s:%s:%s\n' "${esc[0]}" "${esc[1]}" "${esc[2]}" "${esc[3]}"
+}
+
+# mycnf_content USER PASSWORD - option-file text; quotes with the quote char the
+# password does not contain, backslashes doubled
+mycnf_content() {
+    local user=$1 pw=${2//\\/\\\\} q='"'
+    if [[ $pw == *'"'* ]]; then
+        [[ $pw == *"'"* ]] && { error "the database password contains both ' and \" - not supported"; return 1; }
+        q="'"
+    fi
+    printf '[client]\nuser="%s"\npassword=%s%s%s\n' "$user" "$q" "$pw" "$q"
+}
+
 dbdump_clean() { rm -rf "${DUMP_DIR:?}"/*; }

@@ -51,7 +51,7 @@ init_alpha() {
     cborg create "$REPO::a1" "$TMP/src"
     cborg create "$REPO::a2" "$TMP/src"
     relay maint
-    [ "$(cat "$BR_STATE/state/alpha.archives")" = a2 ]
+    [ "$(cut -d' ' -f3- "$BR_STATE/state/alpha.archives")" = a2 ]
 }
 
 @test "maint detects archives deleted by a client and skips the repo" {
@@ -63,7 +63,7 @@ init_alpha() {
     run relay maint
     [ "$status" -eq 1 ]
     [[ $output == *"possible tampering"* ]]
-    [ "$(cat "$BR_STATE/state/alpha.archives")" = $'a1\na2' ]
+    [ "$(cut -d' ' -f3- "$BR_STATE/state/alpha.archives")" = $'a1\na2' ]
 }
 
 @test "maint refuses when the target is not mounted" {
@@ -92,4 +92,61 @@ init_alpha() {
     sed -i "s/^MAX_AGE_HOURS=.*/MAX_AGE_HOURS=0/" "$BR_ETC/repos.d/alpha.conf"
     run relay watch
     [ "$status" -eq 1 ]; [[ $output == *"old (limit 0h)"* ]]
+}
+
+@test "a failed compact after prune is not mistaken for tampering next week" {
+    init_alpha
+    sed -i "s/^KEEP=.*/KEEP=--keep-last=1/" "$BR_ETC/repos.d/alpha.conf"
+    cborg create "$REPO::a1" "$TMP/src"
+    relay maint
+    cborg create "$REPO::a2" "$TMP/src"
+    printf '#!/bin/bash\n[[ $1 == compact ]] && exit 2\nexec borg "$@"\n' >"$TMP/borgwrap"; chmod +x "$TMP/borgwrap"
+    BORG_BIN=$TMP/borgwrap run relay maint
+    [ "$status" -eq 1 ]
+    relay maint
+}
+
+@test "maint detects an archive replaced under the same name" {
+    init_alpha
+    cborg create "$REPO::a1" "$TMP/src"
+    relay maint
+    cborg delete "$REPO::a1"
+    cborg create "$REPO::a1" "$TMP/src"
+    run relay maint
+    [ "$status" -eq 1 ]
+    [[ $output == *"possible tampering"* ]]
+}
+
+@test "maint detects backdated archives" {
+    init_alpha
+    cborg create "$REPO::a1" "$TMP/src"
+    relay maint
+    cborg create --timestamp 2020-01-01T00:00:00 "$REPO::old" "$TMP/src"
+    run relay maint
+    [ "$status" -eq 1 ]
+    [[ $output == *"backdated: old"* ]]
+}
+
+@test "set-passphrase records a tamper baseline for existing archives" {
+    cborg init -e repokey-blake2 "$REPO"
+    cborg create "$REPO::a1" "$TMP/src"
+    echo pw | relay set-passphrase alpha
+    cborg delete "$REPO::a1"
+    run relay maint
+    [ "$status" -eq 1 ]
+    [[ $output == *"possible tampering"* ]]
+}
+
+@test "the same key cannot be authorized for two clients" {
+    echo "$KEY" | relay add-client alpha
+    run bash -c "echo '$KEY' | BORG_BASE_DIR=$TMP/rh $RELAY add-client beta"
+    [ "$status" -ne 0 ]
+    [[ $output == *"already authorized for 'alpha'"* ]]
+}
+
+@test "list runs borg as the relay user" {
+    mkdir -p "$TMP/bin"
+    printf '#!/bin/bash\necho "runuser $*" >>"%s/calls"\n' "$TMP" >"$TMP/bin/runuser"; chmod +x "$TMP/bin/runuser"
+    PATH=$TMP/bin:$PATH BR_RELAY_USER=nobody relay list
+    grep -q "^runuser -u nobody -- .*borg-relay list" "$TMP/calls"
 }

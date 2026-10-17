@@ -26,7 +26,9 @@ client ──ssh──> relay: forced command `borg-relay-serve <name>`
 - **Tamper check.** In borg 1.x append-only mode a client can still *mark* archives as
   deleted; the deletion only becomes final when a full-access client writes. Only the relay
   ever prunes, and before it does it checks that every archive it saw last time still
-  exists. If not, it skips that repository and alerts you, so the deletion can be rolled
+  exists (by archive id, so a re-created archive with the same name is caught) and that
+  no new archive is backdated (which could push real ones out of retention). If either
+  check fails, it skips that repository and alerts you, so the deletion can be rolled
   back (see [RESTORE.md](RESTORE.md)).
 - **The relay is the trusted component.** It holds the target credentials and the repo
   passphrases (for prune/compact/check). Protect it accordingly.

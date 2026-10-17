@@ -60,3 +60,32 @@ teardown() { rm -rf "$TMP"; }
     [ "$status" -eq 1 ]
     [[ $output == *"aborted at: the check"* ]]
 }
+
+@test "ask: '-' means empty even when a default exists" {
+    printf -- '-\n' >"$BR_TTY"; X=nginx; ask X "Q" nginx; [ -z "$X" ]
+}
+
+@test "ask_list keeps an existing array (with spaces) on Enter" {
+    printf '\n' >"$BR_TTY"; L=("/srv/my data" /etc); ask_list L "Paths" "/etc /root"
+    [ "${#L[@]}" = 2 ]; [ "${L[0]}" = "/srv/my data" ]
+}
+
+@test "ask_list: default when empty, '-' clears, typed text splits" {
+    printf '\n' >"$BR_TTY"; L=(); ask_list L "Paths" "/etc /root"
+    [ "${L[*]}" = "/etc /root" ]
+    printf -- '-\n' >"$BR_TTY"; ask_list L "Paths" "/etc"
+    [ "${#L[@]}" = 0 ]
+    printf 'a b\n' >"$BR_TTY"; ask_list L "Paths" "/etc"
+    [ "${L[*]}" = "a b" ]
+}
+
+@test "conf_write writes an empty array as empty" {
+    E=()
+    conf_write "$TMP/c" 600 "$(id -u):$(id -g)" E
+    unset E; source "$TMP/c"
+    [ "${#E[@]}" = 0 ]
+}
+
+@test "classify_borg_error: wrong passphrase means the repo exists" {
+    [ "$(classify_borg_error 'passphrase supplied in BORG_PASSPHRASE ... is incorrect.')" = exists ]
+}

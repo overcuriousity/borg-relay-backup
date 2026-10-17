@@ -39,6 +39,7 @@ _client_authorize() {
     pause "Done on the relay"
     out=$(BORG_PASSPHRASE=x borg_info "$REPO" 2>&1) && { REPO_EXISTS=yes; return 0; }
     case $(classify_borg_error "$out") in
+        exists)    REPO_EXISTS=yes; return 0 ;;
         missing)   REPO_EXISTS=no; return 0 ;;
         denied)    ui_fail "relay rejected the key - was add-client run with the right key?" ;;
         unmounted) ui_fail "relay reports its storage target is not mounted" ;;
@@ -64,6 +65,8 @@ _client_init() {
         export BORG_PASSPHRASE
         borg_init "$REPO" || return 1
     fi
+    # persist at once: the passphrase must never exist only on screen
+    conf_write "$BR_ETC/client.conf" 600 root:root RELAY_HOST RELAY_PORT RELAY_USER BACKUP_NAME CLIENT_KEY BORG_PASSPHRASE
     KEY_EXPORT=$(borg_key_export "$REPO") || return 1
 }
 
@@ -82,9 +85,11 @@ _client_db() {
     local pw=
     ask_secret pw "Database password"
     if [[ $DB_TYPE == pgsql ]]; then
-        ( umask 077; printf '%s:*:%s:%s:%s\n' "$DB_HOST" "$DB_NAME" "$DB_USER" "$pw" >"$BR_ETC/db.pgpass" )
+        ( umask 077; pgpass_line "$DB_HOST" "$DB_NAME" "$DB_USER" "$pw" >"$BR_ETC/db.pgpass" )
     else
-        ( umask 077; printf '[client]\nuser=%s\npassword="%s"\n' "$DB_USER" "$pw" >"$BR_ETC/db.cnf" )
+        local cnf
+        cnf=$(mycnf_content "$DB_USER" "$pw") || return 1
+        ( umask 077; printf '%s\n' "$cnf" >"$BR_ETC/db.cnf" )
     fi
     BACKUP_PATHS+=("$DUMP_DIR_DEFAULT")
     CONF_VARS+=(DB_TYPE DB_NAME DB_HOST DB_USER)
@@ -102,11 +107,10 @@ _client_dedupe_paths() {
 _client_hooks() {
     local h
     BACKUP_PATHS=("${BACKUP_PATHS[@]+"${BACKUP_PATHS[@]}"}")
-    local paths=${BACKUP_PATHS[*]:-/etc /root /home} excl=${EXCLUDES[*]:-}
-    ask paths "Paths to back up (space-separated)"
-    read -ra BACKUP_PATHS <<<"$paths"
-    ask excl "Exclude patterns (space-separated, empty for none)"
-    read -ra EXCLUDES <<<"$excl"
+    EXCLUDES=("${EXCLUDES[@]+"${EXCLUDES[@]}"}")
+    ask_list BACKUP_PATHS "Paths to back up" "/etc /root /home"
+    (( ${#BACKUP_PATHS[@]} )) || { ui_fail "at least one path is needed"; return 1; }
+    ask_list EXCLUDES "Exclude patterns" ""
     install -d -m 700 "$BR_ETC/hooks.d"
     for h in "$BR_ETC"/hooks.d/10-{nextcloud,db-dump,paperless}.{pre,post}; do [[ -L $h ]] && rm -f "$h"; done
     CONF_VARS=(RELAY_HOST RELAY_PORT RELAY_USER BACKUP_NAME CLIENT_KEY BORG_PASSPHRASE BACKUP_PATHS EXCLUDES)
@@ -114,7 +118,7 @@ _client_hooks() {
     if ask_yn "Nextcloud on this host (maintenance mode + DB dump)?" "$([[ -n ${NC_DIR:-} ]] && echo y || echo n)"; then
         ask NC_DIR "Nextcloud directory" /var/www/nextcloud
         ask NC_WEB_USER "Web server user" www-data
-        ask NC_STOP_SERVICE "Service to stop during backup (empty for none)" nginx
+        ask NC_STOP_SERVICE "Service to stop during backup (- for none)" nginx
         _client_db || return 1
         ln -sf "$PREFIX/hooks/10-nextcloud.pre" "$PREFIX/hooks/10-nextcloud.post" "$BR_ETC/hooks.d/"
         CONF_VARS+=(NC_DIR NC_WEB_USER NC_STOP_SERVICE)

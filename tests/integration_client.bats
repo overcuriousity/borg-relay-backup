@@ -102,3 +102,25 @@ archives() { BORG_PASSPHRASE='p$w "x"' borg list --short ssh://borgrelay@relay:2
     [ "$rc" -eq 143 ]
     grep -qx 10-x.post "$TMP/order"
 }
+
+@test "SIGTERM during borg create stops borg before post hooks run" {
+    hook 10-x.post
+    printf '#!/bin/bash\nif [[ $1 == create ]]; then echo $$ >"%s/borgpid"; exec sleep 30; fi\nexec borg "$@"\n' "$TMP" >"$TMP/borgwrap"
+    chmod +x "$TMP/borgwrap"
+    BORG_BIN=$TMP/borgwrap "$RUN" & pid=$!
+    for _ in {1..100}; do [[ -s $TMP/borgpid ]] && break; sleep 0.1; done
+    kill -TERM "$pid"
+    rc=0; wait "$pid" || rc=$?
+    [ "$rc" -eq 143 ]
+    grep -qx 10-x.post "$TMP/order"
+    refute kill -0 "$(cat "$TMP/borgpid")"
+}
+
+@test "SIGTERM while post hooks run does not skip the remaining post hooks" {
+    hook 10-a.post "sleep 2"; hook 20-b.post
+    "$RUN" & pid=$!
+    for _ in {1..300}; do grep -qx 10-a.post "$TMP/order" 2>/dev/null && break; sleep 0.1; done
+    kill -TERM "$pid"
+    wait "$pid" || true
+    grep -qx 20-b.post "$TMP/order"
+}

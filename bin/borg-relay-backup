@@ -22,6 +22,7 @@ BORG_PID=
 run_post() {
     [[ $POST_STATE == pending ]] || return 0
     POST_STATE=finished
+    trap '' TERM INT    # bringing services back must not be interrupted
     if [[ -n $BORG_PID ]] && kill -0 "$BORG_PID" 2>/dev/null; then
         kill -TERM "$BORG_PID"; wait "$BORG_PID"
     fi
@@ -67,8 +68,7 @@ main() {
     hooks_run "$HOOKS_DIR" pre || die "pre hook failed - no backup taken"
 
     local rc=0
-    borg_create "$REPO" "${NAME}-{now:%Y-%m-%dT%H:%M:%S}" &
-    BORG_PID=$!
+    borg_create_bg "$REPO" "${NAME}-{now:%Y-%m-%dT%H:%M:%S}"
     wait "$BORG_PID" || rc=$?
     BORG_PID=
 

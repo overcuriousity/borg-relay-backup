@@ -22,7 +22,9 @@ wiz_apt() {   # wiz_apt PKG... - install what is missing, then require borg 1.4
 wiz_install_files() {
     rm -rf "$PREFIX.new"
     mkdir -p "$PREFIX.new"
-    cp -a "$SRC"/{bin,lib,hooks,systemd,wizard,config,VERSION} "$PREFIX.new/"
+    cp -r "$SRC"/{bin,lib,hooks,systemd,wizard,config,VERSION} "$PREFIX.new/"
+    chown -R root:root "$PREFIX.new"       # these scripts run as root
+    chmod -R go-w "$PREFIX.new"
     rm -rf "$PREFIX"
     mv "$PREFIX.new" "$PREFIX"
     ln -sf "$PREFIX/bin/borg-relay" /usr/local/bin/borg-relay

@@ -69,14 +69,6 @@ teardown() { rm -rf "$TMP"; }
     run relay_mount_ready; [ "$status" -eq 0 ]
 }
 
-@test "tamper_missing lists archives that disappeared" {
-    printf 'a1\na2\na3\n' >"$TMP/prev"
-    printf 'a1\na3\na4\n' >"$TMP/cur"
-    [ "$(tamper_missing "$TMP/prev" "$TMP/cur")" = a2 ]
-    printf 'a1\na2\na3\na4\n' >"$TMP/cur"
-    [ -z "$(tamper_missing "$TMP/prev" "$TMP/cur")" ]
-}
-
 @test "archive age in whole hours" {
     [ "$(archive_age_hours 100000 100000)" = 0 ]
     [ "$(archive_age_hours 100000 $((100000 - 26*3600 - 5)))" = 26 ]
@@ -84,4 +76,27 @@ teardown() { rm -rf "$TMP"; }
 
 @test "remote serve command quotes the name" {
     [ "$(borg_serve_cmdline borg alpha)" = "borg serve --append-only --restrict-to-repository alpha" ]
+}
+
+@test "lock wait defaults to 6 hours so backups and maintenance wait for each other" {
+    unset BORG_LOCK_WAIT
+    [ "$(_lockwait)" = --lock-wait=21600 ]
+}
+
+@test "tamper_report: missing, replaced (same name, new id) and backdated archives" {
+    # lines: <id> <epoch> <name>
+    printf 'id1 1000 a1\nid2 2000 a2\n' >"$TMP/prev"
+    printf 'idX 1000 a1\nid2 2000 a2\nid9 10 old one\nid8 99999 fresh\n' >"$TMP/cur"
+    run tamper_report "$TMP/prev" "$TMP/cur" 50000
+    [[ $output == *"missing: a1"* ]]
+    [[ $output == *"backdated: old one"* ]]
+    [[ $output != *"fresh"* ]]
+    printf 'id1 1000 a1\nid2 2000 a2\nid3 60000 a3\n' >"$TMP/cur"
+    [ -z "$(tamper_report "$TMP/prev" "$TMP/cur" 50000)" ]
+}
+
+@test "tamper_report with an empty previous list reports nothing missing" {
+    : >"$TMP/prev"
+    printf 'id1 1000 a1\n' >"$TMP/cur"
+    [ -z "$(tamper_report "$TMP/prev" "$TMP/cur" 0)" ]
 }

@@ -18,7 +18,11 @@ valid_name "$name" || die "invalid client name in forced command"
 load_conf "$BR_ETC/relay.conf" BACKEND
 relay_serve_argv "$name"
 if [[ $BACKEND == mount ]]; then
-    relay_mount_ready || die "storage target is not mounted at $MOUNTPOINT - refusing to serve"
+    if ! relay_mount_ready; then
+        error "storage target is not mounted at $MOUNTPOINT - refusing to serve"
+        sleep 1   # let the client read stderr before it sees the closed connection
+        exit 1
+    fi
     cd "$RELAY_SERVE_CWD"
 fi
 exec "${RELAY_SERVE_ARGV[@]}"

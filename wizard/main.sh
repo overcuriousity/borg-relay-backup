@@ -12,6 +12,8 @@ source "$SRC/lib/ui.sh"
 source "$SRC/lib/borg.sh"
 # shellcheck source=../lib/notify.sh
 source "$SRC/lib/notify.sh"
+# shellcheck source=../lib/dbdump.sh
+source "$SRC/lib/dbdump.sh"
 # shellcheck source=common.sh
 source "$SRC/wizard/common.sh"
 
