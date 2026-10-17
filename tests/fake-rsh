@@ -1,0 +1,8 @@
+#!/bin/bash
+# Test stand-in for ssh+sshd: runs the relay's forced command for client NAME.
+# borg calls: $BORG_RSH [ssh options] host borg serve ...  Like sshd, pass only
+# the remote command ("borg serve ...") as SSH_ORIGINAL_COMMAND.
+name=$1
+shift
+while (( $# )) && [[ $1 != borg* ]]; do shift; done
+exec env SSH_ORIGINAL_COMMAND="$*" "$(dirname "$0")/../bin/borg-relay-serve" "$name"

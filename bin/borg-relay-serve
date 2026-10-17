@@ -1,0 +1,24 @@
+#!/bin/bash
+# Forced command for client keys on the relay (see authorized_keys):
+#   command=".../borg-relay-serve NAME"
+# Serves exactly one repository, append-only. The client's requested command
+# (SSH_ORIGINAL_COMMAND) is ignored on purpose.
+set -euo pipefail
+export LC_ALL=C
+here=$(dirname "$(readlink -f "$0")")
+# shellcheck source=../lib/common.sh
+source "$here/../lib/common.sh"
+# shellcheck source=../lib/borg.sh
+source "$here/../lib/borg.sh"
+# shellcheck source=../lib/relay.sh
+source "$here/../lib/relay.sh"
+
+name=${1-}
+valid_name "$name" || die "invalid client name in forced command"
+load_conf "$BR_ETC/relay.conf" BACKEND
+relay_serve_argv "$name"
+if [[ $BACKEND == mount ]]; then
+    relay_mount_ready || die "storage target is not mounted at $MOUNTPOINT - refusing to serve"
+    cd "$RELAY_SERVE_CWD"
+fi
+exec "${RELAY_SERVE_ARGV[@]}"
