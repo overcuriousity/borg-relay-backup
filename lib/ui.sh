@@ -94,6 +94,10 @@ conf_write() {
     mv -f "$tmp" "$file"
 }
 
+# is_borg1_version TEXT - output of `<borg> --version`; the program name may carry a
+# version suffix (e.g. "borg-1.4 1.4.4" on storage boxes)
+is_borg1_version() { [[ $1 =~ ^borg(-[0-9.]+)?\ 1\. ]]; }
+
 gen_passphrase() {
     python3 -c 'import secrets, string; a = string.ascii_letters + string.digits; print("".join(secrets.choice(a) for _ in range(32)))'
 }

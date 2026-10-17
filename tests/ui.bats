@@ -89,3 +89,10 @@ teardown() { rm -rf "$TMP"; }
 @test "classify_borg_error: wrong passphrase means the repo exists" {
     [ "$(classify_borg_error 'passphrase supplied in BORG_PASSPHRASE ... is incorrect.')" = exists ]
 }
+
+@test "is_borg1_version accepts versioned program names (Hetzner: borg-1.4)" {
+    is_borg1_version "borg 1.4.0"
+    is_borg1_version "borg-1.4 1.4.4"
+    run is_borg1_version "borg 2.0.0b14";  [ "$status" -ne 0 ]
+    run is_borg1_version "bash: borg: not found"; [ "$status" -ne 0 ]
+}

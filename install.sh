@@ -1,10 +1,10 @@
 #!/bin/bash
 # borg-relay installer bootstrap.
-#   bash <(curl -fsSL https://raw.githubusercontent.com/overcuriousity/borg-relay-backup/v1.0.1/install.sh)
+#   bash <(curl -fsSL https://raw.githubusercontent.com/overcuriousity/borg-relay-backup/v1.0.2/install.sh)
 # Downloads the tagged release and starts the interactive wizard.
 set -euo pipefail
 REPO_SLUG=overcuriousity/borg-relay-backup
-REF=${BR_REF:-v1.0.1}
+REF=${BR_REF:-v1.0.2}
 
 self_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 if [[ -f $self_dir/wizard/main.sh ]]; then

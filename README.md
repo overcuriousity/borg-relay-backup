@@ -50,7 +50,7 @@ client ──ssh──> relay: forced command `borg-relay-serve <name>`
 On the **relay** first, then on every **client** (as root, Debian 13):
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/overcuriousity/borg-relay-backup/v1.0.1/install.sh)
+bash <(curl -fsSL https://raw.githubusercontent.com/overcuriousity/borg-relay-backup/v1.0.2/install.sh)
 ```
 
 The client wizard tells you which two commands to run on the relay

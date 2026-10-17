@@ -102,8 +102,10 @@ _relay_ssh_target() {
     else
         pause "Authorize the key on the target"
     fi
-    runuser -u "$RUSER" -- ssh -F none -i "$TARGET_KEY" -p "$TARGET_PORT" -o BatchMode=yes "$TARGET_USER@$TARGET_HOST" "$REMOTE_BORG --version" \
-        | grep -q '^borg 1\.' || { ui_fail "'$REMOTE_BORG --version' did not run on the target"; return 1; }
+    local ver
+    ver=$(runuser -u "$RUSER" -- ssh -F none -i "$TARGET_KEY" -p "$TARGET_PORT" -o BatchMode=yes \
+        "$TARGET_USER@$TARGET_HOST" "$REMOTE_BORG --version" 2>&1)
+    is_borg1_version "$ver" || { ui_fail "'$REMOTE_BORG --version' on the target answered: $ver"; return 1; }
 }
 
 _relay_backend() {
