@@ -1,0 +1,18 @@
+#!/bin/bash
+set -euo pipefail
+export LC_ALL=C
+lib=$(dirname "$(readlink -f "$0")")/../lib
+# shellcheck source=../lib/common.sh
+source "$lib/common.sh"
+# shellcheck source=../lib/dbdump.sh
+source "$lib/dbdump.sh"
+# Nextcloud: maintenance mode on, optional service stop, DB dump, package list.
+load_conf "$BR_ETC/client.conf" NC_DIR DB_TYPE DB_NAME
+log "nextcloud: maintenance mode on"
+runuser -u "${NC_WEB_USER:-www-data}" -- php "$NC_DIR/occ" maintenance:mode --on
+if [[ -n ${NC_STOP_SERVICE:-} ]]; then
+    log "nextcloud: stopping $NC_STOP_SERVICE"
+    systemctl stop "$NC_STOP_SERVICE"
+fi
+dbdump_run
+dpkg --get-selections >"$DUMP_DIR/dpkg-selections.txt"

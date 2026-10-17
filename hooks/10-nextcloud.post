@@ -1,0 +1,20 @@
+#!/bin/bash
+set -uo pipefail
+export LC_ALL=C
+lib=$(dirname "$(readlink -f "$0")")/../lib
+# shellcheck source=../lib/common.sh
+source "$lib/common.sh"
+# shellcheck source=../lib/dbdump.sh
+source "$lib/dbdump.sh"
+# Nextcloud: bring everything back; try every step even if one fails.
+load_conf "$BR_ETC/client.conf" NC_DIR
+rc=0
+if [[ -n ${NC_STOP_SERVICE:-} ]]; then
+    log "nextcloud: starting $NC_STOP_SERVICE"
+    systemctl start "$NC_STOP_SERVICE" || { error "could not start $NC_STOP_SERVICE"; rc=1; }
+fi
+log "nextcloud: maintenance mode off"
+runuser -u "${NC_WEB_USER:-www-data}" -- php "$NC_DIR/occ" maintenance:mode --off \
+    || { error "could not leave maintenance mode"; rc=1; }
+dbdump_clean
+exit "$rc"

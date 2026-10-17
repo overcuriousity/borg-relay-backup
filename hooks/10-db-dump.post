@@ -1,0 +1,10 @@
+#!/bin/bash
+set -euo pipefail
+export LC_ALL=C
+lib=$(dirname "$(readlink -f "$0")")/../lib
+# shellcheck source=../lib/common.sh
+source "$lib/common.sh"
+# shellcheck source=../lib/dbdump.sh
+source "$lib/dbdump.sh"
+# Remove the database dump after the backup.
+dbdump_clean

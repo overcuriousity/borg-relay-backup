@@ -1,0 +1,12 @@
+#!/bin/bash
+set -euo pipefail
+export LC_ALL=C
+lib=$(dirname "$(readlink -f "$0")")/../lib
+# shellcheck source=../lib/common.sh
+source "$lib/common.sh"
+# Paperless-ngx: incremental document export from the running container.
+# The export directory is kept between runs so unchanged files are skipped.
+load_conf "$BR_ETC/client.conf" PAPERLESS_DIR
+log "paperless: exporting documents"
+docker compose --project-directory "$PAPERLESS_DIR" exec -T "${PAPERLESS_SERVICE:-webserver}" \
+    document_exporter "${PAPERLESS_EXPORT_IN_CONTAINER:-/usr/src/paperless/export}" --delete

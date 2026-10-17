@@ -1,0 +1,11 @@
+#!/bin/bash
+set -euo pipefail
+export LC_ALL=C
+lib=$(dirname "$(readlink -f "$0")")/../lib
+# shellcheck source=../lib/common.sh
+source "$lib/common.sh"
+# shellcheck source=../lib/dbdump.sh
+source "$lib/dbdump.sh"
+# Standalone database dump (PostgreSQL / MariaDB).
+load_conf "$BR_ETC/client.conf" DB_TYPE DB_NAME
+dbdump_run
