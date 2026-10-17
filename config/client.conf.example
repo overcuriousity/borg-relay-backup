@@ -1,0 +1,17 @@
+# /etc/borg-relay/client.conf (mode 600) - written by the installer.
+RELAY_HOST=relay.example.lan
+RELAY_PORT=22
+RELAY_USER=borgrelay
+BACKUP_NAME=myhost                 # repo name on the target; default: short hostname
+CLIENT_KEY=/root/.ssh/borg-relay_ed25519
+BORG_PASSPHRASE='change-me'
+BACKUP_PATHS=(/etc /root /home)
+EXCLUDES=('*/.cache/*')
+RETRY_INTERVAL=60                  # seconds between reachability checks
+RETRY_WINDOW=3600                  # give up after this many seconds
+LOG_KEEP_DAYS=30
+# Hook settings (only for enabled hooks):
+# NC_DIR=/var/www/nextcloud NC_WEB_USER=www-data NC_STOP_SERVICE=nginx
+# DB_TYPE=pgsql DB_NAME=nextcloud DB_HOST=localhost DB_USER=nextcloud
+# PAPERLESS_DIR=/opt/paperless PAPERLESS_SERVICE=webserver
+# PAPERLESS_EXPORT_IN_CONTAINER=/usr/src/paperless/export

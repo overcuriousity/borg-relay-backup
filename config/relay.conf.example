@@ -1,0 +1,11 @@
+# /etc/borg-relay/relay.conf (mode 640 root:borgrelay) - written by the installer.
+BACKEND=mount                      # mount | ssh-borg
+# mount backend
+MOUNTPOINT=/srv/borgtarget
+MOUNT_REQUIRE_MOUNTPOINT=yes       # never set to "no" outside tests
+# ssh-borg backend
+# TARGET_HOST=backup.example.net
+# TARGET_PORT=22
+# TARGET_USER=backup
+# TARGET_KEY=/var/lib/borg-relay/.ssh/target_ed25519
+# REMOTE_BORG=borg                 # e.g. borg-1.4 on providers offering several versions

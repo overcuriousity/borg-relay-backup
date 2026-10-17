@@ -1,0 +1,10 @@
+[Unit]
+Description=Daily borg-relay backup
+
+[Timer]
+OnCalendar=*-*-* 21:30:00
+RandomizedDelaySec=10min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

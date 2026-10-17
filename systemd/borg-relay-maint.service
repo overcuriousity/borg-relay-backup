@@ -1,0 +1,13 @@
+[Unit]
+Description=borg-relay weekly maintenance (tamper check, prune, compact, check)
+Wants=network-online.target
+After=network-online.target
+OnFailure=borg-relay-notify@%n.service
+
+[Service]
+Type=oneshot
+User=borgrelay
+ExecStart=/usr/local/lib/borg-relay/bin/borg-relay maint
+TimeoutStartSec=24h
+Nice=10
+IOSchedulingClass=idle

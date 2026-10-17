@@ -1,0 +1,6 @@
+[Unit]
+Description=borg-relay failure alert for %i
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/lib/borg-relay/bin/borg-relay-notify %i

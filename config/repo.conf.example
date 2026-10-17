@@ -1,0 +1,4 @@
+# /etc/borg-relay/repos.d/<name>.conf (mode 600 borgrelay) - written by borg-relay set-passphrase.
+BORG_PASSPHRASE='change-me'
+KEEP='--keep-within=7d --keep-weekly=4 --keep-monthly=6'
+MAX_AGE_HOURS=26

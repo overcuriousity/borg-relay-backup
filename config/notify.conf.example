@@ -1,0 +1,6 @@
+# /etc/borg-relay/notify.conf (client: 600 root; relay: 640 root:borgrelay)
+GOTIFY_URL=https://gotify.example.lan
+GOTIFY_TOKEN=change-me
+GOTIFY_INSECURE=no                 # yes = accept a self-signed certificate
+UP_ENDPOINT=                       # UnifiedPush endpoint URL (e.g. NextPush)
+UP_MAX_BYTES=4000
