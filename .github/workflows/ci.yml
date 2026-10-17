@@ -1,0 +1,11 @@
+name: ci
+on: [push, pull_request]
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    container: debian:trixie
+    steps:
+      - run: apt-get update && apt-get install -y --no-install-recommends bats shellcheck borgbackup openssh-client python3 curl ca-certificates util-linux procps git
+      - uses: actions/checkout@v4
+      - run: tests/lint.sh
+      - run: bats tests

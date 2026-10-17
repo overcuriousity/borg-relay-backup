@@ -1,0 +1,4 @@
+FROM docker.io/library/debian:trixie
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends bats shellcheck borgbackup openssh-client python3 curl ca-certificates util-linux procps \
+ && rm -rf /var/lib/apt/lists/*
