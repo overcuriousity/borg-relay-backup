@@ -57,3 +57,29 @@ teardown() { rm -rf "$TMP"; }
     [ -z "$(find "$PREFIX" ! -user root)" ]
     [ -z "$(find "$PREFIX" -perm /022 ! -type l)" ]
 }
+
+@test "sshd step refuses when ssh.socket and ssh.service both own port 22" {
+    source "$REPO_ROOT/wizard/relay.sh"
+    SSHD_DROPIN=$TMP/borg-relay.conf
+    sshd() { return 0; }
+    systemctl() { echo "systemctl $*" >>"$TMP/calls"; [[ $1 == is-active ]] && return 0; return 0; }
+    run _relay_sshd
+    [ "$status" -ne 0 ]
+    [[ $output == *"ssh.socket"* ]]
+    refute grep -q 'reload' "$TMP/calls"
+}
+
+@test "sshd step verifies that sshd still runs after the reload" {
+    source "$REPO_ROOT/wizard/relay.sh"
+    SSHD_DROPIN=$TMP/borg-relay.conf
+    sshd() { return 0; }
+    systemctl() {
+        case "$1 $2" in
+            "is-active --quiet") [[ $3 == ssh.socket ]] && return 1; [[ -e $TMP/reloaded ]] && return 1; return 0 ;;
+            "reload ssh") touch "$TMP/reloaded" ;;
+        esac
+    }
+    run _relay_sshd
+    [ "$status" -ne 0 ]
+    [[ $output == *"not running"* ]]
+}

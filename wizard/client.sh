@@ -162,7 +162,7 @@ _client_first_run() {
 }
 
 _client_recovery() {
-    ui_header "Recovery entry for KeePassXC - CLIENT $BACKUP_NAME"
+    ui_header "Recovery information - CLIENT $BACKUP_NAME"
     {
         echo "===== borg-relay CLIENT $BACKUP_NAME ($(date -I)) ====="
         echo "Repository via relay: $REPO"
@@ -179,7 +179,7 @@ _client_recovery() {
         echo "  borg extract <repo>::<archive> path/inside/archive"
         echo "====="
     } >&2
-    pause "Copy this block into KeePassXC now"
+    pause "Store this block in a safe place (e.g. your password manager) now"
 }
 
 client_wizard() {

@@ -225,7 +225,7 @@ Client wizard:
 7. Install units; run one real backup; show `borg list`.
 8. Recovery block (client part).
 
-Recovery blocks (plain text for KeePassXC):
+Recovery blocks (plain text for a safe place, e.g. a password manager):
 
 - client: host, relay repo URL, passphrase, full exported repo key,
   client key path, restore one-liners via the relay.
@@ -235,7 +235,7 @@ Recovery blocks (plain text for KeePassXC):
 
 ### Restore
 
-`RESTORE.md`: restore from a fresh machine with only the KeePassXC entries
+`RESTORE.md`: restore from a fresh machine with only the stored recovery entries
 (both with and without a working relay); single-file restore via
 `borg mount`; full-host rebuild; Nextcloud and Paperless restore; moving
 repos to a new target.

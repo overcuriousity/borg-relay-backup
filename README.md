@@ -37,7 +37,7 @@ client ──ssh──> relay: forced command `borg-relay-serve <name>`
 ## Features
 
 - One-line interactive installer; every step is verified before the next one; it ends with a
-  recovery block to store in your password manager (e.g. KeePassXC).
+  recovery block to keep in a safe place (e.g. a password manager).
 - systemd timers (`Persistent=true`): missed runs catch up after a reboot.
 - Alerts for **failed** runs (systemd `OnFailure=`) and for **missing** runs (daily check
   on the relay), via Gotify and/or UnifiedPush (e.g. NextPush).
@@ -50,7 +50,7 @@ client ──ssh──> relay: forced command `borg-relay-serve <name>`
 On the **relay** first, then on every **client** (as root, Debian 13):
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/overcuriousity/borg-relay-backup/v1.0.2/install.sh)
+bash <(curl -fsSL https://raw.githubusercontent.com/overcuriousity/borg-relay-backup/v1.0.3/install.sh)
 ```
 
 The client wizard tells you which two commands to run on the relay

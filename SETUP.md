@@ -49,7 +49,7 @@ anything while it is not mounted.
 ## 3. Install the relay
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/overcuriousity/borg-relay-backup/v1.0.2/install.sh)
+bash <(curl -fsSL https://raw.githubusercontent.com/overcuriousity/borg-relay-backup/v1.0.3/install.sh)
 ```
 
 Choose role `relay`. The wizard:

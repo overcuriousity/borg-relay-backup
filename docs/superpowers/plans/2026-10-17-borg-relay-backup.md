@@ -2219,7 +2219,7 @@ _relay_timers() {
 }
 
 _relay_recovery() {
-    ui_header "Recovery entry for KeePassXC - RELAY $(hostname -s)"
+    ui_header "Recovery information - RELAY $(hostname -s)"
     {
         echo "===== borg-relay RELAY $(hostname -s) ($(date -I)) ====="
         echo "Backend: $BACKEND"
@@ -2238,7 +2238,7 @@ _relay_recovery() {
         echo "Add a client:  borg-relay add-client <name>   then   borg-relay set-passphrase <name>"
         echo "====="
     } >&2
-    pause "Copy this block into KeePassXC now"
+    pause "Store this block in a safe place (e.g. your password manager) now"
 }
 
 relay_wizard() {
@@ -2407,7 +2407,7 @@ _client_first_run() {
 }
 
 _client_recovery() {
-    ui_header "Recovery entry for KeePassXC - CLIENT $BACKUP_NAME"
+    ui_header "Recovery information - CLIENT $BACKUP_NAME"
     {
         echo "===== borg-relay CLIENT $BACKUP_NAME ($(date -I)) ====="
         echo "Repository via relay: $REPO"
@@ -2424,7 +2424,7 @@ _client_recovery() {
         echo "  borg extract <repo>::<archive> path/inside/archive"
         echo "====="
     } >&2
-    pause "Copy this block into KeePassXC now"
+    pause "Store this block in a safe place (e.g. your password manager) now"
 }
 
 client_wizard() {
@@ -2465,7 +2465,7 @@ No code; each file must contain the listed sections with working commands that m
 
 - [ ] **Step 1: `README.md`** — sections: what it is (one paragraph, goal from spec), architecture diagram (from spec), security model (append-only enforced on the relay, tamper check, relay is the trusted component, client-side encryption, what a compromised client/relay can and cannot do), features, quick start (the one-liner with `v1.0.0`, relay first then clients), operation (`borg-relay list`, `journalctl -u borg-relay-backup`, `systemctl list-timers 'borg-relay*'`), limitations (relay down stops watch; NextPush on Nextcloud caveat; paths with spaces must be entered via `client.conf`, not the wizard prompt), license.
 - [ ] **Step 2: `SETUP.md`** — prerequisites (Debian 13 containers; relay privileged only for the `mount` backend with CIFS; Proxmox firewall: clients → relay:22 only, relay → target only), preparing a target with two examples (Hetzner Storage Box via `ssh-borg` with port 23, `REMOTE_BORG=borg-1.4`, SFTP-only `ssh-copy-id -s`, sub-accounts optional; any SMB share via `mount`), relay installation walk-through, client installation walk-through (incl. the two relay commands), adding site-specific hooks (example: a `20-update.post` that pulls container images, marked as an example), changing the target (stop timers, copy the repo tree, rerun relay wizard, `borg-relay list`).
-- [ ] **Step 3: `RESTORE.md`** — restore with only KeePassXC (relay up / relay gone, both backends), single files via `borg mount`, full host rebuild (reinstall Debian → installer with the same name, `REPO_EXISTS` path → `borg extract`), Nextcloud restore (files, `psql`/`mariadb` import of the dump, `occ maintenance:mode --off`, `occ maintenance:data-fingerprint`), Paperless restore (`document_importer`), "Rolling back an append-only repository" (summarize borg 1.4 docs: inspect `transactions`, remove segment files newer than the last good transaction, delete `index.*`/`hints.*`/`integrity.*`, `borg check --repair` not needed for pure rollback; link to the borg docs section "append-only mode").
+- [ ] **Step 3: `RESTORE.md`** — restore with only the stored recovery blocks (relay up / relay gone, both backends), single files via `borg mount`, full host rebuild (reinstall Debian → installer with the same name, `REPO_EXISTS` path → `borg extract`), Nextcloud restore (files, `psql`/`mariadb` import of the dump, `occ maintenance:mode --off`, `occ maintenance:data-fingerprint`), Paperless restore (`document_importer`), "Rolling back an append-only repository" (summarize borg 1.4 docs: inspect `transactions`, remove segment files newer than the last good transaction, delete `index.*`/`hints.*`/`integrity.*`, `borg check --repair` not needed for pure rollback; link to the borg docs section "append-only mode").
 - [ ] **Step 4: `docs/rollout-checklist.md`** — checkbox list for the greenfield rollout: verify `--restrict-to-repository` relative path on the real target; relay wizard; each client wizard; force a failure (stop relay sshd) and confirm alert; confirm watch alert by setting `MAX_AGE_HOURS=0` once; run `borg-relay maint` manually; test a restore of one file per client; record dates.
 - [ ] **Step 5: Commit** — `git add -A && git commit -m "docs: readme, setup, restore, rollout checklist"`
 

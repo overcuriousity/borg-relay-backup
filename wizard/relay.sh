@@ -120,8 +120,17 @@ _relay_backend() {
     fi
 }
 
+SSHD_DROPIN=${SSHD_DROPIN:-/etc/ssh/sshd_config.d/borg-relay.conf}
+
 _relay_sshd() {
-    cat >/etc/ssh/sshd_config.d/borg-relay.conf <<CONF
+    if systemctl is-active --quiet ssh.socket && systemctl is-active --quiet ssh.service; then
+        ui_fail "ssh.socket and ssh.service are both active and compete for port 22 - a reload would stop sshd."
+        ui_info "Debian's default is ssh.service alone. Fix with:"
+        ui_info "  systemctl disable --now ssh.socket && systemctl restart ssh.service"
+        ui_info "Your current session stays open. Then retry this step."
+        return 1
+    fi
+    cat >"$SSHD_DROPIN" <<CONF
 # managed by borg-relay - clients may only run their forced borg command
 Match User $RUSER
     PasswordAuthentication no
@@ -134,7 +143,11 @@ Match User $RUSER
     AllowAgentForwarding no
 Match all
 CONF
-    sshd -t && systemctl reload ssh
+    sshd -t || return 1
+    systemctl reload ssh || return 1
+    sleep 1
+    systemctl is-active --quiet ssh.service \
+        || { ui_fail "sshd is not running after the reload - see: journalctl -u ssh.service"; return 1; }
 }
 
 _relay_timers() {
@@ -143,7 +156,7 @@ _relay_timers() {
 }
 
 _relay_recovery() {
-    ui_header "Recovery entry for KeePassXC - RELAY $(hostname -s)"
+    ui_header "Recovery information - RELAY $(hostname -s)"
     {
         echo "===== borg-relay RELAY $(hostname -s) ($(date -I)) ====="
         echo "Backend: $BACKEND"
@@ -162,7 +175,7 @@ _relay_recovery() {
         echo "Add a client:  borg-relay add-client <name>   then   borg-relay set-passphrase <name>"
         echo "====="
     } >&2
-    pause "Copy this block into KeePassXC now"
+    pause "Store this block in a safe place (e.g. your password manager) now"
 }
 
 relay_wizard() {
