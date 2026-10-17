@@ -2473,7 +2473,7 @@ No code; each file must contain the listed sections with working commands that m
 
 ### Task 12: Publish
 
-- [ ] **Step 1: Final check** — `make check` → all green; `git status` clean; `a grep for the site's private IPs, hostnames, account IDs and mail addresses (kept outside the repo)` returns nothing.
+- [ ] **Step 1: Final check** — `make check` → all green; `git status` clean; a grep for the site's private IPs, hostnames, account IDs and mail addresses (kept outside the repo) returns nothing.
 - [ ] **Step 2: Create the GitHub repo and push**
 ```bash
 gh repo create overcuriousity/borg-relay-backup --public --source . --remote origin \
