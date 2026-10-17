@@ -59,7 +59,7 @@ teardown() { rm -rf "$TMP"; }
     [ -z "${BORG_REMOTE_PATH:-}" ]
     BACKEND=ssh-borg TARGET_KEY=/k REMOTE_BORG=borg-1.4; relay_borg_env
     [ "$BORG_REMOTE_PATH" = borg-1.4 ]
-    [[ $BORG_RSH == "ssh -i /k "* ]]
+    [[ $BORG_RSH == "ssh -F none -i /k "* ]]
 }
 
 @test "mount readiness can be relaxed only by config" {
@@ -99,4 +99,19 @@ teardown() { rm -rf "$TMP"; }
     : >"$TMP/prev"
     printf 'id1 1000 a1\n' >"$TMP/cur"
     [ -z "$(tamper_report "$TMP/prev" "$TMP/cur" 0)" ]
+}
+
+@test "relay ssh ignores the host's ssh_config (e.g. broken FreeIPA proxy settings)" {
+    BACKEND=ssh-borg TARGET_HOST=h TARGET_PORT=23 TARGET_USER=u TARGET_KEY=/k REMOTE_BORG=borg
+    relay_serve_argv alpha
+    [ "${RELAY_SERVE_ARGV[0]} ${RELAY_SERVE_ARGV[1]} ${RELAY_SERVE_ARGV[2]}" = "ssh -F none" ]
+    relay_borg_env
+    [[ $BORG_RSH == "ssh -F none "* ]]
+}
+
+@test "every ssh / ssh-copy-id call in the product ignores the host's ssh_config" {
+    # an ssh/ssh-copy-id command followed by anything but "-F none"
+    offenders=$(grep -nE '(^|[^-./a-z]|:-)(ssh|ssh-copy-id) +("|-[^F])' \
+        "$REPO_ROOT"/bin/* "$REPO_ROOT"/lib/*.sh "$REPO_ROOT"/wizard/*.sh || true)
+    [ -z "$offenders" ] || { echo "$offenders"; false; }
 }

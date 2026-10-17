@@ -98,11 +98,11 @@ _relay_ssh_target() {
     if ask_yn "Copy it now with ssh-copy-id (asks for the target password)?" y; then
         local sftp=()
         ask_yn "Is the target SFTP-only without a shell (e.g. a storage box)?" n && sftp=(-s)
-        runuser -u "$RUSER" -- ssh-copy-id "${sftp[@]}" -i "$TARGET_KEY.pub" -p "$TARGET_PORT" "$TARGET_USER@$TARGET_HOST" <"$BR_TTY" || return 1
+        runuser -u "$RUSER" -- ssh-copy-id -F none "${sftp[@]}" -i "$TARGET_KEY.pub" -p "$TARGET_PORT" "$TARGET_USER@$TARGET_HOST" <"$BR_TTY" || return 1
     else
         pause "Authorize the key on the target"
     fi
-    runuser -u "$RUSER" -- ssh -i "$TARGET_KEY" -p "$TARGET_PORT" -o BatchMode=yes "$TARGET_USER@$TARGET_HOST" "$REMOTE_BORG --version" \
+    runuser -u "$RUSER" -- ssh -F none -i "$TARGET_KEY" -p "$TARGET_PORT" -o BatchMode=yes "$TARGET_USER@$TARGET_HOST" "$REMOTE_BORG --version" \
         | grep -q '^borg 1\.' || { ui_fail "'$REMOTE_BORG --version' did not run on the target"; return 1; }
 }
 

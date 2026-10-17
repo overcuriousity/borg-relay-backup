@@ -32,7 +32,7 @@ _client_identity() {
 
 _client_authorize() {
     local out
-    export BORG_RSH="ssh -i $CLIENT_KEY -o BatchMode=yes -o ConnectTimeout=20"
+    export BORG_RSH="ssh -F none -i $CLIENT_KEY -o BatchMode=yes -o ConnectTimeout=20"
     ui_info "On the relay, run:   borg-relay add-client $BACKUP_NAME"
     ui_info "and paste this key:"
     printf '\n%s\n\n' "$(cat "$CLIENT_KEY.pub")" >&2
@@ -50,7 +50,7 @@ _client_authorize() {
 }
 
 _client_init() {
-    export BORG_RSH="ssh -i $CLIENT_KEY -o BatchMode=yes -o ConnectTimeout=20"
+    export BORG_RSH="ssh -F none -i $CLIENT_KEY -o BatchMode=yes -o ConnectTimeout=20"
     if [[ $REPO_EXISTS == yes ]]; then
         ui_info "Repository '$BACKUP_NAME' already exists on the target."
         ask_secret BORG_PASSPHRASE "Its passphrase"

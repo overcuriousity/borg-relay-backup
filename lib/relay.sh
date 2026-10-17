@@ -17,6 +17,8 @@ relay_authorized_line() {
 
 _target_key() { printf '%s' "${TARGET_KEY:-$BR_STATE/.ssh/target_ed25519}"; }
 
+# All ssh calls use "-F none": the relay must not depend on the host's ssh_config
+# (e.g. FreeIPA-joined hosts route ssh through sss_ssh_knownhostsproxy).
 relay_serve_argv() {
     local name=$1
     case ${BACKEND:-} in
@@ -27,7 +29,7 @@ relay_serve_argv() {
             ;;
         ssh-borg)
             RELAY_SERVE_CWD=
-            RELAY_SERVE_ARGV=(ssh -i "$(_target_key)" -p "${TARGET_PORT:-22}"
+            RELAY_SERVE_ARGV=(ssh -F none -i "$(_target_key)" -p "${TARGET_PORT:-22}"
                 -o BatchMode=yes -o StrictHostKeyChecking=yes -o ServerAliveInterval=30
                 "${TARGET_USER}@${TARGET_HOST}"
                 "$(borg_serve_cmdline "${REMOTE_BORG:-borg}" "$name")")
@@ -54,7 +56,7 @@ relay_repo_location() {
 
 relay_borg_env() {
     if [[ $BACKEND == ssh-borg ]]; then
-        BORG_RSH="ssh -i $(_target_key) -o BatchMode=yes -o StrictHostKeyChecking=yes -o ServerAliveInterval=30"
+        BORG_RSH="ssh -F none -i $(_target_key) -o BatchMode=yes -o StrictHostKeyChecking=yes -o ServerAliveInterval=30"
         BORG_REMOTE_PATH=${REMOTE_BORG:-borg}
         export BORG_RSH BORG_REMOTE_PATH
     fi

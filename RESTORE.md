@@ -8,7 +8,7 @@ On the client (or a fresh machine set up with the same client key):
 
 ```bash
 export BORG_PASSPHRASE='<passphrase from the client block>'
-export BORG_RSH='ssh -i /root/.ssh/borg-relay_ed25519'
+export BORG_RSH='ssh -F none -i /root/.ssh/borg-relay_ed25519'
 REPO='ssh://borgrelay@<relay>:22/./<name>'
 
 borg list "$REPO"

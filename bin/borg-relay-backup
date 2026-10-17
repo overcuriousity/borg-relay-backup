@@ -48,7 +48,7 @@ main() {
     valid_name "$NAME" || die "BACKUP_NAME '$NAME' is not a valid name"
     REPO="ssh://${RELAY_USER:-borgrelay}@${RELAY_HOST}:${RELAY_PORT:-22}/./${NAME}"
     export BORG_PASSPHRASE BR_ETC
-    export BORG_RSH="${BORG_RSH:-ssh -i ${CLIENT_KEY:-/root/.ssh/borg-relay_ed25519} -o BatchMode=yes -o ConnectTimeout=20 -o ServerAliveInterval=30}"
+    export BORG_RSH="${BORG_RSH:-ssh -F none -i ${CLIENT_KEY:-/root/.ssh/borg-relay_ed25519} -o BatchMode=yes -o ConnectTimeout=20 -o ServerAliveInterval=30}"
 
     exec 9>"$LOCK"
     flock -n 9 || die "another backup run is in progress"
