@@ -4,5 +4,5 @@
 # the remote command ("borg serve ...") as SSH_ORIGINAL_COMMAND.
 name=$1
 shift
-while (( $# )) && [[ $1 != borg* ]]; do shift; done
+while (( $# )) && [[ $1 != borg && ! $1 =~ ^borg-[0-9.]+$ ]]; do shift; done
 exec env SSH_ORIGINAL_COMMAND="$*" "$(dirname "$0")/../bin/borg-relay-serve" "$name"
