@@ -64,7 +64,59 @@ borg-relay list                              # relay: repos, archive count, age 
 systemctl list-timers 'borg-relay*'          # both: schedules
 journalctl -u borg-relay-backup              # client: run logs (also /var/log/borg-relay/)
 journalctl -u borg-relay-maint -u borg-relay-watch   # relay
-systemctl start borg-relay-backup            # client: back up now
+```
+
+### Running backups manually
+
+On the **client**, as root:
+
+```bash
+# Regular backup now (with hooks). Blocks until done; add --no-block to return at once.
+systemctl start borg-relay-backup
+journalctl -fu borg-relay-backup             # follow progress
+
+# Seed backup (full upload without hooks, services stay online). Use it for the first
+# backup and to re-run a first backup that failed or was interrupted.
+systemctl start --no-block borg-relay-seed
+journalctl -fu borg-relay-seed               # follow progress
+```
+
+A seed run pauses the daily timer and resumes it when it stops, also when it fails. If a
+seed run failed, start it again before the next scheduled run; otherwise that run uploads
+the rest with hooks (e.g. Nextcloud in maintenance mode for hours). Borg writes a checkpoint
+every 30 minutes, so a new run picks up the data that is already uploaded instead of
+starting over.
+
+Both units run `/usr/local/lib/borg-relay/bin/borg-relay-backup [--seed]`. Starting them
+through systemd keeps the failure alerts (`OnFailure=`) and the timer handling.
+
+### Where things live
+
+Configuration is plain shell `KEY=value` files; changes apply on the next run. Annotated
+examples are in [`config/`](config/).
+
+| Path | Host | Contents |
+|---|---|---|
+| `/etc/borg-relay/client.conf` | client | relay address, repo name, passphrase, backup paths, excludes, retry, hook settings |
+| `/etc/borg-relay/hooks.d/` | client | `NN-name.pre` / `NN-name.post` hooks (see [SETUP.md](SETUP.md#5-hooks)) |
+| `/etc/borg-relay/db.pgpass`, `db.cnf` | client | database credentials for the dump hooks |
+| `/root/.ssh/borg-relay_ed25519` | client | client key for the relay |
+| `/etc/borg-relay/relay.conf` | relay | backend (`mount` / `ssh-borg`) and storage target |
+| `/etc/borg-relay/repos.d/<name>.conf` | relay | per-client passphrase, retention (`KEEP`), `MAX_AGE_HOURS` |
+| `/etc/borg-relay/target.cred` | relay | SMB credentials (`mount` backend) |
+| `/var/lib/borg-relay/.ssh/` | relay | `authorized_keys` (client keys), `target_ed25519` (key for the target) |
+| `/var/lib/borg-relay/state/` | relay | archive lists for the tamper check |
+| `/etc/borg-relay/notify.conf` | both | Gotify / UnifiedPush settings |
+| `/var/log/borg-relay/` | client | run logs |
+| `/usr/local/lib/borg-relay/` | both | installed scripts (overwritten on update — don't edit) |
+
+To change the schedule, edit the drop-in instead of the unit (the units are overwritten on
+update):
+
+```bash
+systemctl edit borg-relay-backup.timer       # client; wizard's time is in timer.d/schedule.conf
+systemctl edit borg-relay-maint.timer        # relay: weekly prune/compact/check
+systemctl edit borg-relay-watch.timer        # relay: daily missed-backup check
 ```
 
 ## Limitations
