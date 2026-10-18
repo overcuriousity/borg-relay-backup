@@ -1,0 +1,16 @@
+[Unit]
+Description=borg-relay first (seed) backup without hooks - services stay online
+Wants=network-online.target
+After=network-online.target
+OnFailure=borg-relay-notify@%n.service
+
+[Service]
+Type=oneshot
+ExecStartPre=/usr/bin/systemctl stop borg-relay-backup.timer
+ExecStart=/usr/local/lib/borg-relay/bin/borg-relay-backup --seed
+ExecStopPost=/usr/bin/systemctl start borg-relay-backup.timer
+TimeoutStartSec=infinity
+KillMode=mixed
+TimeoutStopSec=5min
+Nice=10
+IOSchedulingClass=idle

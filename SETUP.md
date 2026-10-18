@@ -49,7 +49,7 @@ anything while it is not mounted.
 ## 3. Install the relay
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/overcuriousity/borg-relay-backup/v1.0.3/install.sh)
+bash <(curl -fsSL https://raw.githubusercontent.com/overcuriousity/borg-relay-backup/v1.0.4/install.sh)
 ```
 
 Choose role `relay`. The wizard:
@@ -75,6 +75,12 @@ The client wizard verifies the relay's host key, the key authorization, initiali
 repository (`repokey-blake2`, random 32-character passphrase by default), configures paths,
 excludes and hooks, notifications, the daily timer (default 21:30), runs the first backup and
 prints the client's recovery block.
+
+For the first backup the wizard offers `now` (wait for it), `background` or `skip`.
+`background` starts `borg-relay-seed.service`: a full upload **without hooks**, so services
+such as Nextcloud stay online for the hours a large first upload can take. The daily timer
+is paused meanwhile and resumes afterwards; the next regular run (with hooks) only uploads
+changes. You can also start it later: `systemctl start --no-block borg-relay-seed`.
 
 **Store both recovery blocks (relay and client) in your password manager.**
 

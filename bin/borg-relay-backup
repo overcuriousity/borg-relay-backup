@@ -1,6 +1,8 @@
 #!/bin/bash
 # Client backup run: wait for the repo, pre hooks, borg create, post hooks, notify.
 # Failures exit 1; systemd OnFailure= sends the alert with the journal.
+#   --seed   first full upload without hooks (services stay online); the next
+#            regular run only uploads changes
 set -uo pipefail
 export LC_ALL=C
 here=$(dirname "$(readlink -f "$0")")
@@ -43,6 +45,8 @@ wait_for_repo() {
 }
 
 main() {
+    local seed=no kind=backup
+    [[ ${1-} == --seed ]] && { seed=yes; kind="seed backup"; }
     load_conf "$BR_ETC/client.conf" RELAY_HOST BORG_PASSPHRASE BACKUP_PATHS
     NAME=${BACKUP_NAME:-$(hostname -s)}
     valid_name "$NAME" || die "BACKUP_NAME '$NAME' is not a valid name"
@@ -51,7 +55,7 @@ main() {
     export BORG_RSH="${BORG_RSH:-ssh -F none -i ${CLIENT_KEY:-/root/.ssh/borg-relay_ed25519} -o BatchMode=yes -o ConnectTimeout=20 -o ServerAliveInterval=30}"
 
     exec 9>"$LOCK"
-    flock -n 9 || die "another backup run is in progress"
+    flock -n 9 || die "Another backup run is in progress."
 
     mkdir -p "$LOG_DIR"
     find "$LOG_DIR" -name '*.log' -mtime +"${LOG_KEEP_DAYS:-30}" -delete
@@ -62,10 +66,14 @@ main() {
     trap on_exit EXIT
     trap 'exit 143' TERM INT
 
-    wait_for_repo || die "repository not reachable within ${RETRY_WINDOW:-3600}s"
+    wait_for_repo || die "The repository was not reachable within ${RETRY_WINDOW:-3600} seconds."
 
-    POST_STATE=pending
-    hooks_run "$HOOKS_DIR" pre || die "pre hook failed - no backup taken"
+    if [[ $seed == yes ]]; then
+        log "seed run: hooks are skipped, services stay online"
+    else
+        POST_STATE=pending
+        hooks_run "$HOOKS_DIR" pre || die "A pre-backup hook failed; no backup was taken."
+    fi
 
     local rc=0
     borg_create_bg "$REPO" "${NAME}-{now:%Y-%m-%dT%H:%M:%S}"
@@ -74,15 +82,15 @@ main() {
 
     local post_rc=0
     run_post || post_rc=$?
-    (( rc < 2 ))       || die "borg create failed (exit $rc)"
-    (( post_rc == 0 )) || die "post hook failed - check the services on '$NAME'"
+    (( rc < 2 ))       || die "borg create failed (exit code $rc)."
+    (( post_rc == 0 )) || die "A post-backup hook failed. Check the services on '$NAME'."
 
     if (( rc == 1 )); then
         log "backup completed with warnings"
-        notify_send warning "[WARNING] $NAME: backup completed with warnings" "$(cat "$LOG_FILE")"
+        notify_send warning "[WARNING] $NAME: $kind completed with warnings" "$(cat "$LOG_FILE")"
     else
         log "backup completed"
-        notify_send success "[OK] $NAME: backup completed" "$(cat "$LOG_FILE")"
+        notify_send success "[OK] $NAME: $kind completed" "$(cat "$LOG_FILE")"
     fi
 }
 

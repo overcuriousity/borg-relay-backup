@@ -37,7 +37,7 @@ read_input() {   # read_input PROMPT SECRET(0|1) -> REPLY
     fi
 }
 
-need_name() { valid_name "${1-}" || die "NAME must match ^[a-z0-9][a-z0-9-]{0,62}\$"; }
+need_name() { valid_name "${1-}" || die "Invalid name: use lowercase letters, digits and dashes only (max. 63 characters)."; }
 
 relay_conf() {
     load_conf "$BR_ETC/relay.conf" BACKEND
@@ -69,7 +69,7 @@ cmd_add_client() {
     local blob owner
     read -r _ blob _ <<<"$REPLY"
     owner=$(grep -F " $blob borg-relay:" "$AUTH_KEYS" 2>/dev/null | sed 's/.* borg-relay://' | head -n1)
-    [[ -z $owner || $owner == "$name" ]] || die "this key is already authorized for '$owner' - every client needs its own key"
+    [[ -z $owner || $owner == "$name" ]] || die "This key is already authorized for '$owner'. Each client needs its own key."
     tmp=$(mktemp)
     [[ -f $AUTH_KEYS ]] && grep -v " borg-relay:${name}\$" "$AUTH_KEYS" >"$tmp"
     printf '%s\n' "$line" >>"$tmp"
@@ -83,7 +83,7 @@ cmd_set_passphrase() {
     need_name "${1-}"
     local name=$1 f=$REPOS_D/$1.conf keep=$DEFAULT_KEEP max=26 tmp
     read_input "Passphrase of repo '$name': " 1
-    [[ -n $REPLY ]] || die "empty passphrase"
+    [[ -n $REPLY ]] || die "No passphrase entered."
     if [[ -r $f ]]; then
         # shellcheck disable=SC1090
         keep=$(source "$f"; printf '%s' "${KEEP:-$DEFAULT_KEEP}")
@@ -98,9 +98,9 @@ cmd_set_passphrase() {
     if as_relay_user "$self" _verify "$name"; then
         log "passphrase for '$name' stored and verified"
     else
-        die "verification failed - wrong passphrase or repo not initialized yet"
+        die "Verification failed: the passphrase is wrong or the repository does not exist yet."
     fi
-    as_relay_user "$self" _baseline "$name" || die "could not record the tamper-check baseline"
+    as_relay_user "$self" _baseline "$name" || die "Could not record the archive list for the tamper check."
 }
 
 # _baseline NAME - first tamper-check baseline, so even existing archives are protected
@@ -187,7 +187,7 @@ cmd_watch() {
     while IFS= read -r name; do
         if out=$(watch_one "$name"); then log "$name: fresh"; else error "$name: $out"; problems=1; fi
     done < <(repo_names)
-    (( problems == 0 )) || die "backups missing or stale"
+    (( problems == 0 )) || die "One or more backups are missing or out of date."
 }
 
 # borg work always runs as the relay user (its known_hosts, cache and target access)

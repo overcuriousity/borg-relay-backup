@@ -18,16 +18,17 @@ source "$SRC/lib/dbdump.sh"
 source "$SRC/wizard/common.sh"
 
 require_root
-grep -q '^13' /etc/debian_version 2>/dev/null || ui_info "Note: tested on Debian 13 only."
+grep -q '^13' /etc/debian_version 2>/dev/null || ui_info "Note: this installer is tested on Debian 13 only."
 ui_header "borg-relay-backup $(cat "$SRC/VERSION") installer"
-ui_info "Every step is checked before the next one. Re-running is safe; your previous answers become the defaults."
+ui_info "Each step is verified before the next one starts. You can run the installer again at any time;
+   your previous answers are offered as defaults."
 
 ROLE=
-ask ROLE "Role of this machine: 'relay' or 'client'" client
+ask ROLE "Role of this machine ('relay' or 'client')" client
 case $ROLE in
     relay)  # shellcheck source=relay.sh
             source "$SRC/wizard/relay.sh";  relay_wizard ;;
     client) # shellcheck source=client.sh
             source "$SRC/wizard/client.sh"; client_wizard ;;
-    *)      die "unknown role '$ROLE'" ;;
+    *)      die "Unknown role '$ROLE'. Please answer 'relay' or 'client'." ;;
 esac

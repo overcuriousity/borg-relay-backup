@@ -13,10 +13,10 @@ wiz_apt() {   # wiz_apt PKG... - install what is missing, then require borg 1.4
         dpkg-query -W -f='${Status}' "$p" 2>/dev/null | grep -q 'install ok installed' || missing+=("$p")
     done
     if (( ${#missing[@]} )); then
-        ui_info "Installing packages: ${missing[*]}"
+        ui_info "Installing required packages: ${missing[*]}"
         apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq "${missing[@]}" >/dev/null || return 1
     fi
-    borg --version | grep -q '^borg 1\.4' || { ui_fail "BorgBackup 1.4 required, found: $(borg --version)"; return 1; }
+    borg --version | grep -q '^borg 1\.4' || { ui_fail "BorgBackup 1.4 is required, but $(borg --version) is installed."; return 1; }
 }
 
 wiz_install_files() {
@@ -40,22 +40,22 @@ wiz_units() {   # wiz_units UNIT... - install unit files and reload
 # Notification settings; NOTIFY_OWNER (e.g. root:root or root:borgrelay) and NOTIFY_MODE set by caller.
 _wiz_notify_check() {
     GOTIFY_URL=${GOTIFY_URL-} GOTIFY_TOKEN=${GOTIFY_TOKEN-} GOTIFY_INSECURE=${GOTIFY_INSECURE:-no} UP_ENDPOINT=${UP_ENDPOINT-}
-    if ask_yn "Send notifications to Gotify?" "$([[ -n $GOTIFY_URL ]] && echo y || echo n)"; then
-        ask GOTIFY_URL "Gotify URL (e.g. https://gotify.lan)"
+    if ask_yn "Send notifications via Gotify?" "$([[ -n $GOTIFY_URL ]] && echo y || echo n)"; then
+        ask GOTIFY_URL "Gotify server URL (e.g. https://gotify.example.lan)"
         ask_secret GOTIFY_TOKEN "Gotify application token"
-        ask GOTIFY_INSECURE "Accept a self-signed certificate (yes/no)" no
+        ask GOTIFY_INSECURE "Does the Gotify server use a self-signed certificate? (yes/no)" no
     else
         GOTIFY_URL='' GOTIFY_TOKEN=''
     fi
-    if ask_yn "Send notifications to a UnifiedPush endpoint (e.g. NextPush)?" "$([[ -n $UP_ENDPOINT ]] && echo y || echo n)"; then
-        ask UP_ENDPOINT "UnifiedPush endpoint URL"
+    if ask_yn "Send notifications via UnifiedPush (e.g. NextPush)?" "$([[ -n $UP_ENDPOINT ]] && echo y || echo n)"; then
+        ask UP_ENDPOINT "UnifiedPush endpoint URL (shown by your UnifiedPush app)"
     else
         UP_ENDPOINT=
     fi
     UP_MAX_BYTES=${UP_MAX_BYTES:-4000}
     conf_write "$BR_ETC/notify.conf" "$NOTIFY_MODE" "$NOTIFY_OWNER" GOTIFY_URL GOTIFY_TOKEN GOTIFY_INSECURE UP_ENDPOINT UP_MAX_BYTES
-    [[ -z $GOTIFY_URL && -z $UP_ENDPOINT ]] && { ui_info "No notifications configured - you will not hear about failures."; return 0; }
+    [[ -z $GOTIFY_URL && -z $UP_ENDPOINT ]] && { ui_info "No notification channel configured: failed or missing backups will not be reported."; return 0; }
     NOTIFY_STRICT=1 notify_send success "borg-relay test from $(hostname -s)" "If you can read this, notifications work." || return 1
-    ask_yn "Did the test message arrive?" y
+    ask_yn "A test message was sent. Did it arrive?" y
 }
-wiz_notify() { step "notifications" _wiz_notify_check; }
+wiz_notify() { step "Notifications configured" _wiz_notify_check; }

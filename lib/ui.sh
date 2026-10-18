@@ -25,7 +25,7 @@ ask_list() {
     local -n _al=$1
     local q=$2 def=$3 shown ans
     if (( ${#_al[@]} )); then shown=${_al[*]}; else shown=$def; fi
-    printf ' %s (space-separated, - for none)%s: ' "$q" "${shown:+ [$shown]}" >&2
+    printf ' %s (separated by spaces, "-" for none)%s: ' "$q" "${shown:+ [$shown]}" >&2
     IFS= read -r ans <"$BR_TTY" || ans=
     if [[ -z $ans ]]; then
         (( ${#_al[@]} )) || read -ra _al <<<"$def"
@@ -46,7 +46,7 @@ ask_secret() {
         printf '\n' >&2
         [[ -n $ans ]] && { _sec_v=$ans; return 0; }
         [[ -n ${_sec_v:-} ]] && return 0
-        ui_fail "must not be empty"
+        ui_fail "A value is required."
     done
 }
 
@@ -66,7 +66,7 @@ step() {
     while :; do
         if "$fn"; then ui_ok "$desc"; return 0; fi
         ui_fail "$desc"
-        ask_yn "Retry (you can change your answers)?" y || die "aborted at: $desc"
+        ask_yn "Retry this step? Your previous answers are offered as defaults" y || die "Installation aborted at: $desc"
     done
 }
 

@@ -9,6 +9,7 @@ setup() {
     source "$REPO_ROOT/lib/ui.sh"
     source "$REPO_ROOT/lib/borg.sh"
     source "$REPO_ROOT/lib/notify.sh"
+    source "$REPO_ROOT/lib/dbdump.sh"
     source "$REPO_ROOT/wizard/common.sh"
 }
 teardown() { rm -rf "$TMP"; }
@@ -82,4 +83,31 @@ teardown() { rm -rf "$TMP"; }
     run _relay_sshd
     [ "$status" -ne 0 ]
     [[ $output == *"not running"* ]]
+}
+
+@test "choosing a database dump creates the dump folder" {
+    source "$REPO_ROOT/wizard/client.sh"
+    DUMP_DIR_DEFAULT=$TMP/dumps BR_ETC=$TMP/etc
+    BACKUP_PATHS=(/etc) CONF_VARS=()
+    printf 'pgsql\n' >"$BR_TTY"
+    DB_TYPE=pgsql DB_NAME=nc DB_HOST=localhost DB_USER=u
+    ask_secret() { local -n _v=$1; _v=pw; }
+    _client_db
+    [ -d "$TMP/dumps" ]
+}
+
+@test "preview tolerates borg warnings and shows real errors" {
+    source "$REPO_ROOT/wizard/client.sh"
+    REPO=r
+    borg_dry_run() { echo "- /etc/a"; echo "/x: [Errno 2] No such file or directory" >&2; return 1; }
+    run _client_preview
+    [ "$status" -eq 0 ]
+    [[ $output == *"No such file"* ]]
+    borg_dry_run() { echo "Repository /x does not exist" >&2; return 2; }
+    run _client_preview
+    [ "$status" -ne 0 ]
+    [[ $output == *"does not exist"* ]]
+    borg_dry_run() { for i in $(seq 100); do echo "- /f$i"; done; return 141; }
+    run _client_preview
+    [ "$status" -eq 0 ]
 }

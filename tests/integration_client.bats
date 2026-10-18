@@ -60,7 +60,7 @@ archives() { BORG_PASSPHRASE='p$w "x"' borg list --short ssh://borgrelay@relay:2
     hook 10-x.post "exit 2"
     run "$RUN"
     [ "$status" -eq 1 ]
-    [[ $output == *"post hook failed"* ]]
+    [[ $output == *"post-backup hook failed"* ]]
     [[ $(archives) == alpha-* ]]
 }
 
@@ -123,4 +123,13 @@ archives() { BORG_PASSPHRASE='p$w "x"' borg list --short ssh://borgrelay@relay:2
     kill -TERM "$pid"
     wait "$pid" || true
     grep -qx 20-b.post "$TMP/order"
+}
+
+@test "--seed backs up without running any hooks" {
+    hook 10-x.pre; hook 10-x.post
+    run "$RUN" --seed
+    [ "$status" -eq 0 ]
+    [ ! -e "$TMP/order" ]
+    [[ $(archives) == alpha-* ]]
+    grep -q '^\[OK\] alpha: seed backup completed' "$CURL_LOG"
 }

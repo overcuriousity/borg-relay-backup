@@ -21,3 +21,11 @@ setup() { load test_helper; }
 @test "config examples are valid bash" {
     for c in "$REPO_ROOT"/config/*.example; do bash -n "$c"; done
 }
+
+@test "seed service pauses the daily timer and alerts on failure" {
+    u=$REPO_ROOT/systemd/borg-relay-seed.service
+    grep -qx 'ExecStart=/usr/local/lib/borg-relay/bin/borg-relay-backup --seed' "$u"
+    grep -qx 'ExecStartPre=/usr/bin/systemctl stop borg-relay-backup.timer' "$u"
+    grep -qx 'ExecStopPost=/usr/bin/systemctl start borg-relay-backup.timer' "$u"
+    grep -qx 'OnFailure=borg-relay-notify@%n.service' "$u"
+}
